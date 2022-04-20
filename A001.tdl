@@ -1,0 +1,269 @@
+/*===================================================================
+  ==                       Enabo Wang                              ==
+  ===================================================================
+  ==    Test program for ALL-IN-ONE device                         ==
+  ==    Device :                                                   ==
+  ==    Author :                                                   ==
+  ==    Program:                                                   ==
+  ===================================================================
+    Version | Date       | Histroy                             
+    ----------------------------------------------------------------- 
+         A1 |            | 1.Wafer out
+            |            |               
+            |            |                                     
+            |            |                                     
+    -----------------------------------------------------------------
+*/
+
+//===============================================================//
+//== FK: 1 =>                                                  ==//
+//== FK: 2 =>                                                  ==//
+//== FK: 3 =>                                                  ==//
+//== FK: 4 =>                                                  ==//
+//== FK: 5 =>                                                  ==//
+//== FK: 6 =>                                                  ==//
+//== FK: 7 =>                                                  ==//
+//== FK: 8 =>                                                  ==//
+//== FK: 9 =>                                                  ==//
+//== FK:10 =>                                                  ==//
+//== FK:11 =>                                                  ==//
+//== FK:12 =>                                                  ==//
+//== FK:13 =>                                                  ==//
+//== FK:14 =>                                                  ==//
+//== FK:15 =>                                                  ==//
+//== FK:16 =>                                                  ==//
+//== FK:17 =>                                                  ==//
+//== FK:18 =>                                                  ==//
+//== FK:19 =>                                                  ==//
+//== FK:20 =>                                                  ==//
+//== FK:21 =>                                                  ==//
+//== FK:22 =>                                                  ==//
+//== FK:23 =>                                                  ==//
+//== FK:24 =>                                                  ==//
+//== FK:25 =>                                                  ==//
+//== FK:26 =>                                                  ==//
+//== FK:27 =>                                                  ==//
+//== FK:28 =>                                                  ==//
+//== FK:29 =>                                                  ==//
+//== FK:30 =>                                                  ==//
+//== FK:31 =>                                                  ==//
+//== FK:32 =>                                                  ==//
+//===============================================================//
+$include "stdio.tdl";
+$include "D:\\ADVANTEST\\TECS\\include\\tecs_UserCommon.tdl";
+
+$include "a001_1s_socket.tdl";
+$include "global_function_def.tdl";
+$include "global_parameter_def.tdl";
+////========================//
+////=== Normal Test Item ===//
+////========================//
+$include "contact.tdl";
+$include "mipi_hs_func.tdl";
+
+//////========================//
+//////== Shmoo File Include ==//
+//////========================//
+//use "shmoo_12.tdl";
+//
+
+int set_bin_nr(void)
+{
+  int FDUT = TESTDUT.Get_FailDut(CURRENT);
+  cat_num=test_cat; sort_num=test_sot;
+  if (FDUT)
+  {
+   if( (FK & 0x0004)!=0x0004)
+   {
+    pattern_set.PostExec();
+    sequence.PostExec();
+    CONTACT.Off(FDUT, REJECT, REF_WET);
+   }
+
+   category.dut(FDUT);
+   category.Num(cat_num);
+   category.PostExec();
+
+   //if( (FK & 0x0004)!=0x0004)
+   //{  print "CAT:",cat_num,"  BIN:",sort_num,"\n"; }
+  }
+
+  first_run = 0;
+  return (ENABLE);
+}
+
+int wafer_end() 
+{	
+  HIDAR.PostExec();
+  waittime.time(3S);
+  waittime.PreExec();
+  return(ENABLE);
+}
+void probe_func()
+{
+   string       str_temp;
+   PROBER       prober;
+   int          int_count;
+   ofstream     output_file;
+   string       str_hidar_path;
+   int          int_prober_status;
+   string       str_time;
+   string       tsl_gettime;
+   string       str_lot_name;
+   string       str_sublot;
+   string       str_datalog_file_name;
+   string       datalog_file_name;
+   string       str_wafer_id;
+   DATALOG      data_log;
+
+   str_hidar_path="./data/";
+
+   int_prober_status=0;
+   int_prober_status=prober.Get_Status();
+  
+   if(int_prober_status!=0)
+     {
+       str_lot_name=prober.Get_Info("lot");
+       for (int_count=0;int_count<str_lot_name.len();int_count++)
+            { if (int (str_lot_name[int_count]) == 32)
+                { str_lot_name.truncate(int_count);  }
+            }
+       HEADER.lotno(str_lot_name);
+       str_sublot=prober.Get_Info("slot");
+       HEADER.sublot(str_sublot);
+   
+       str_temp=tsl_gettime();
+       str_time=str_temp.substr(10,2)+str_temp.substr(13,2)+str_temp.substr(16,2);
+       str_datalog_file_name=str_lot_name + "_" + str_sublot + "_" + str_time + ".hst";
+       datalog_file_name=str_hidar_path+str_lot_name + "_" + str_sublot + "_" + str_time + ".log";
+                 
+       HEADER.wafer(str_sublot);
+   
+       HIDAR.stnNum(NONE);
+       HIDAR.cond_path("./histogram/");
+       
+       HIDAR.cond_file("hidar_auto.asc");
+       HIDAR.out_dev(FILE);
+       HIDAR.out_path(str_hidar_path);
+       HIDAR.out_file(str_datalog_file_name,"w");
+       HIDAR.Load();
+       HIDAR.Clear();
+   
+       if( (FK & 0x0008)== 0x0008 )
+         {	
+          data_log.Init();
+//        data_log.ft_type(DTLOG_FIRST_FAIL);
+          data_log.ft_type(DTLOG_CONTINUOUS_FAIL);
+          data_log.ft_format(DTLOG_V_FAILPIN);
+          data_log.type(DC,AC,FT);
+          data_log.header(ON);
+          data_log.waferXY(ON);
+          data_log.category_sort(ON);
+          data_log.output(datalog_file_name,"a");
+          data_log.Enable();
+          data_log.Load();
+         } 
+      } 
+}
+
+
+int main()
+{ 
+
+  //cat_num=1; sort_num=1;
+  for( Test_counter=1; Test_counter<=1 ;Test_counter+=1)
+  {	 
+
+   //================== On Branch Event ==================//
+   ON_BRANCH.event(set_bin_nr,ON_FCTF,ON_DCTF,ON_ACTF);
+   ON_BRANCH.event(wafer_end,ON_WEND);
+   ON_BRANCH.Load();
+   //=========== Test Time and FuncKEY Initial ==========//
+   int test_follow_check=0;
+   int sram_check_1=0;
+   Total_Time=0S;
+   timer.start();
+   FK=FKEY.num();
+
+   //================ Function Key Define ===============//
+   if( FK==0 ){ test_follow_check=1; }
+   if( (FK &  0x00001)== 0x00001 ){ test_follow_check=1; } // FK = 1
+   if( (FK &  0x00004)== 0x00004 ){ test_follow_check=1; } // FK = 3
+   if( (FK &  0x00008)== 0x00008 ){ test_follow_check=1; } // FK = 4
+   if( (FK &  0x00020)== 0x00020 ){ test_follow_check=1; } // FK = 6
+   if( (FK &  0x00040)== 0x00040 ){ test_follow_check=1; } // FK = 7
+   if( (FK &  0x00080)== 0x00080 ){ test_follow_check=1; } // FK = 8
+   if( (FK &  0x00100)== 0x00100 ){ test_follow_check=1; } // FK = 9
+   if( (FK &  0x00200)== 0x00200 ){ test_follow_check=1; } // FK =10
+   //=========== Probe and HIDER File and Datalog ========//
+   probe_func();
+
+   //================= Test Sequence Load ================//
+   SEQUENCE_SET(1);
+   category.Clear();
+   //================= Main Test Function ================//
+   if( test_follow_check==1 )
+   { 
+     trim_flag=0;
+     //------------------------------------------------------------------
+     if(              contact() == FAIL ) {return FAIL;}          // Bin:2/3
+   //  if(              leakage() == FAIL ) {return FAIL;}          // Bin:4
+   //  if(                  idd() == FAIL ) {return FAIL;}          // Bin:5
+   //
+   //  trim_pre_check();                                            // Check Trim Done or not
+   //
+   // if( trim_flag2!=0 )
+   //  { 
+   //   if(      ememory_check() == FAIL ) {return FAIL;}           // Bin:10
+   //   //byte_prom_cmd();
+   //  }
+   //
+   //
+   //
+   // if( trim_flag==0 )
+   //  { 
+   //   if(                sim() == FAIL ) {return FAIL;}           // Bin:12
+   //   if(          trim_mode() == FAIL ) {return FAIL;}           // Bin:16
+   // //if(       trim_recheck() == FAIL ) {return FAIL;}           // Bin:16
+   //  } 
+   //
+   //  if(            pump_volt() == FAIL ) {return FAIL;}           // Bin:17/15/14/43
+   //
+   //  if(       cmd_check_mode() == FAIL ) {return FAIL;}           // Bin:21
+   //  if(       rgb_check_mode() == FAIL ) {return FAIL;}           // Bin:26
+
+
+
+     //=================================================================
+   }
+
+//  //=====  Other function by FuncKey ======//
+
+//  if( (FK &  0x4000000)== 0x4000000  ){   shmoo_func_27();        }//== FK:27 => Dump Timming Shmoo         ==//
+//  if( (FK &  0x8000000)== 0x8000000  ){   shmoo_func_28();        }//== FK:28 => Cell Timming Shmoo         ==//
+//  if( (FK &  0x8000000)== 0x8000000  ){       gpib_test();        }//== FK:28 => Cell Timming Shmoo         ==//
+
+  //=====  Calculate the Total Test time ======//
+  if(FK & 0x0001)
+  { Total_Time = timer.get();
+    print "===============================================\n";
+    print "Total Test Time = ",Total_Time, "\n\n";
+  } 
+  }
+  //===============================================//
+  //int totalFail = TESTDUT.Get_FailDut(TOTAL);
+  //int setting   = TESTDUT.Get_Dut(SETTING);
+  //int Passdut   = totalFail ^ setting;
+  //    
+  //if(Passdut != 0)
+  // {
+  //   category.dut(Passdut);
+  //   category.Num(cat_num);
+  //   category.PostExec();
+  // }
+  //===============================================//
+  int totalFail = TESTDUT.Get_FailDut(TOTAL);
+  if( totalFail==0 )
+   { cat_num=1; sort_num=1; bin_num(); }
+  return PASS;
+}
